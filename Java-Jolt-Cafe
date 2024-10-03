@@ -1,0 +1,509 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+using namespace std;
+
+// Function declarations
+int getSalary(const string& position);
+int getDailyWage(int salary);
+int getHourlyWage(int salary);
+int getSalaryOvertime(int overtime, int hourlyWage);
+int getSalaryPartTime(int hourlyWage, int workingHours);
+int getSalaryFullTime(int salary, int overtime, int leave);
+int calcIncomeTax(int salary);
+
+const int EMPLOYEE_COUNT = 100;
+
+// Base class Person definition
+class Person {
+protected:
+    string id;
+    string name;
+    string startDate;
+
+public:
+    Person(string i, string n, string sd) : id(i), name(n), startDate(sd) {}
+    Person() {}
+
+    // Setters and Getters for Person class
+    void setId(const string& i) { id = i; }
+    void setName(const string& n) { name = n; }
+    void setStartDate(const string& sd) { startDate = sd; }
+
+    string getId() const { return id; }
+    string getName() const { return name; }
+    string getStartDate() const { return startDate; }
+};
+
+// Employee class inherits from Person
+class Employee : public Person {
+private:
+    string position;
+    string type;
+    int hourlyWage;
+    int workingHours;
+    int salary;
+    int netSalary;
+    int netSalaryBeforeTax;
+    int taxAmount;
+    int leaveDays;
+    int overtime;
+
+public:
+    Employee(string i, string n, string p, string t, string sd, int w, int l, int o)
+        : Person(i, n, sd), position(p), type(t), leaveDays(l), overtime(o) {
+        salary = getSalary(position);
+        hourlyWage = getHourlyWage(salary);
+
+        if (t == "full time")
+            workingHours = 8;
+        else
+            workingHours = w;
+
+        calculateNetSalary();
+    }
+
+    Employee() : Person() {}
+
+    void inputEmployee(bool update) {
+        cin.ignore();
+        cout << "\nEnter Employee Name ";
+        if (update) cout << "[" << name << "]";
+        cout << " : ";
+        getline(cin, name);
+
+        cout << "\nEnter Start Working Date ";
+        if (update) cout << "[" << startDate << "]";
+        cout << " : ";
+        getline(cin, startDate);
+
+        string positionLabel;
+        do {
+            cout << "\nEnter Position (Barista, Cashier, Kitchen Staff, Cleaner, Waiter, Waitress, Supervisor) ";
+            if (update) cout << "[" << position << "]";
+            cout << " : ";
+            getline(cin, positionLabel);
+            int salary_ = getSalary(positionLabel);
+            if (salary_ == 0) {
+                cout << "\nPlease input valid position value!";
+            } else {
+                hourlyWage = getHourlyWage(salary_);
+                salary = salary_;
+                position = positionLabel;
+                break;
+            }
+        } while (true);
+
+        string typeLabel;
+        do {
+            cout << "\nEnter Employee Type (full time/part time) ";
+            if (update) cout << "[" << type << "]";
+            cout << " : ";
+            getline(cin, typeLabel);
+
+            if (typeLabel == "full time") {
+                cout << "\nEnter Leave Days ";
+                if (update) cout << "[" << leaveDays << "]";
+                cout << " : ";
+                cin >> leaveDays;
+
+                cout << "\nEnter Overtime hours ";
+                if (update) cout << "[" << overtime << "]";
+                cout << " : ";
+                cin >> overtime;
+                workingHours = 8;
+                type = "full time";
+                break;
+            } else if (typeLabel == "part time") {
+                leaveDays = 0;
+                overtime = 0;
+                cout << "\nEnter Working Hours ";
+                if (update) cout << "[" << workingHours << "]";
+                cout << " : ";
+                cin >> workingHours;
+                type = "part time";
+                break;
+            } else {
+                cout << "\nPlease input valid type value!";
+            }
+        } while (true);
+
+        calculateNetSalary();
+
+        cout << endl;
+        if (update)
+            cout << "Successfully updated!";
+        else
+            cout << "Successfully created!";
+    }
+
+    void calculateNetSalary() {
+        if (type == "part time") {
+            netSalaryBeforeTax = getSalaryPartTime(hourlyWage, workingHours);
+            netSalary = netSalaryBeforeTax;
+            taxAmount = 0;
+        } else {
+            netSalaryBeforeTax = getSalaryFullTime(salary, overtime, leaveDays);
+            taxAmount = calcIncomeTax(netSalaryBeforeTax);
+            netSalary = netSalaryBeforeTax - taxAmount;
+        }
+    }
+
+    void updateEmployee() {
+        char y_n = 'y';
+        cout << "\nYou are about to update Employee - " << id << " (y/n) - ";
+        cin >> y_n;
+        if (y_n != 'y') return;
+        inputEmployee(true);
+    }
+
+    void insertEmployee() {
+        cout << "\nEnter Employee ID : ";
+        cin >> id;
+        inputEmployee(false);
+    }
+
+    string GetPosition() const { return position; }
+    int GetNetSalary() const { return netSalary; }
+    int GetNetSalaryBeforeTax() const { return netSalaryBeforeTax; }
+    int GetTaxAmount() const { return taxAmount; }
+    string GetType() const { return type; }
+    int GetLeaveDays() const { return leaveDays; }
+    int GetOvertime() const { return overtime; }
+
+    void getEmployee() const {
+        cout << left
+             << setw(5) << id
+             << setw(5) << name
+             << setw(15) << position
+             << setw(10) << type
+             << setw(12) << startDate
+             << "$"<< setw(9) << salary
+             << "$"<<setw(10) << hourlyWage
+             << setw(8) << (type == "full time" ? 8 : workingHours)
+             << setw(8) << overtime
+             << setw(8) << leaveDays
+             << "$"<<setw(10) << taxAmount
+             << "$"<<setw(12) << netSalary;
+    }
+};
+class EmployeeManager {
+private:
+    Employee emp[EMPLOYEE_COUNT];
+    int EMPLOYEE;
+
+public:
+    EmployeeManager() : EMPLOYEE(0) {}
+
+    void insertEmployee() {
+        if (EMPLOYEE < EMPLOYEE_COUNT) {
+            emp[EMPLOYEE].insertEmployee();
+            EMPLOYEE++; // Increment EMPLOYEE count after successful insertion
+        } else {
+            cout << "Employee limit reached!" << endl;
+        }
+    }
+
+    // Heapify function for heap sort
+    void heapify(int n, int i) {
+        int largest = i;   // Initialize largest as root
+        int left = 2 * i + 1;   // left child
+        int right = 2 * i + 2;  // right child
+
+        // If left child is larger than root
+        if (left < n && emp[left].getName() > emp[largest].getName())
+            largest = left;
+
+        // If right child is larger than largest so far
+        if (right < n && emp[right].getName() > emp[largest].getName())
+            largest = right;
+
+        // If largest is not root
+        if (largest != i) {
+            swap(emp[i], emp[largest]);  // Swap the current node with the largest
+
+            // Recursively heapify the affected sub-tree
+            heapify(n, largest);
+        }
+    }
+    // Heap sort function for employee names
+    void heapSort() {
+        int n = EMPLOYEE;
+
+        // Build heap (rearrange array)
+        for (int i = n / 2 - 1; i >= 0; i--)
+            heapify(n, i);
+
+        // Extract elements from heap one by one
+        for (int i = n - 1; i > 0; i--) {
+            // Move current root to end
+            swap(emp[0], emp[i]);
+
+            // Call max heapify on the reduced heap
+            heapify(i, 0);
+        }
+    }
+
+    void showEmployees() {
+        // First, sort the employees by name using heap sort
+        heapSort();
+        cout << "Employees' Details: " << endl << endl << left
+             << setw(5) << "ID"
+             << setw(5) << "Name"
+             << setw(15) << "Position"
+             << setw(10) << "Type"
+             << setw(12) << "Start Date"
+             << setw(10) << "Salary"
+             << setw(10) << "HrlyWage"
+             << setw(8) << "WrHours"
+             << setw(8) << "OT"
+             << setw(8) << "Leave"
+             << setw(10) << "Tax"
+             << setw(12) << "Net Salary"
+             << endl;
+
+        for (int i = 0; i < EMPLOYEE; i++) {
+            emp[i].getEmployee();
+            cout << endl;
+        }
+    }
+
+    void updateEmployeeById() {
+        string id;
+        showEmployees();
+        cout << "\nEnter Employee ID to update: ";
+        cin >> id;
+
+        for (int i = 0; i < EMPLOYEE; i++) {
+            if (emp[i].getId() == id) {
+                emp[i].updateEmployee();
+                return;
+            }
+        }
+        cout << "Employee ID not found!" << endl;
+    }
+
+    void deleteAnEmployeeById() {
+        string id;
+        showEmployees();
+        cout << "\nEnter Employee ID to delete: ";
+        cin >> id;
+
+        for (int i = 0; i < EMPLOYEE; i++) {
+            if (emp[i].getId() == id) {
+                // Shift remaining employees down
+                for (int j = i; j < EMPLOYEE - 1; j++) {
+                    emp[j] = emp[j + 1];
+                }
+                EMPLOYEE--; // Decrease the employee count
+                cout << "Employee deleted successfully!" << endl;
+                return;
+            }
+        }
+        cout << "Employee ID not found!" << endl;
+    }
+
+    void showEmployeesByType(const string& type) {
+        if (type == "full time") {
+            // Header for full-time employees
+            cout << "Salary for Full Time: " << endl << endl << left
+                 << setw(5) << "ID"
+                 << setw(15) << "Name"
+                 << setw(15) << "Position"
+                 << setw(10) << "Type"
+                 << setw(8) << "Leave"
+                 << setw(8) << "OT"
+                 << setw(10) << "Tax"
+                 << setw(12) << "Net Salary"
+                 << endl;
+
+            // Display full-time employees
+            for (int i = 0; i < EMPLOYEE; i++) {
+                if (emp[i].GetType() == type) {
+                    cout << left
+                         << setw(5) << emp[i].getId()
+                         << setw(15) << emp[i].getName()
+                         << setw(15) << emp[i].GetPosition()
+                         << setw(10) << emp[i].GetType()
+                         << setw(8) << emp[i].GetLeaveDays()
+                         << setw(8) << emp[i].GetOvertime()
+                         << "$" << setw(9) << emp[i].GetTaxAmount()
+                         << "$" << setw(12) << emp[i].GetNetSalary()
+                         << endl;
+                }
+            }
+        } else if (type == "part time") {
+            // Header for part-time employees
+            cout << "Salary for Part Time: " << endl << endl << left
+                 << setw(5) << "ID"
+                 << setw(15) << "Name"
+                 << setw(15) << "Position"
+                 << setw(10) << "Type"
+                 << setw(10) << "WorkHours"
+                 << setw(10) << "Tax"
+                 << setw(12) << "Net Salary"
+                 << endl;
+
+            // Display part-time employees
+            for (int i = 0; i < EMPLOYEE; i++) {
+                if (emp[i].GetType() == type) {
+                    cout << left
+                         << setw(5) << emp[i].getId()
+                         << setw(15) << emp[i].getName()
+                         << setw(15) << emp[i].GetPosition()
+                         << setw(10) << emp[i].GetType()
+                         << setw(10) << (emp[i].GetType() == "part time" ? : 0)
+                         << "$" << setw(9) << emp[i].GetTaxAmount()
+                         << "$" << setw(12) << emp[i].GetNetSalary()
+                         << endl;
+                }
+            }
+        } else {
+            cout << "Invalid employee type!" << endl;
+        }
+    }
+
+    void MonthlyReport() {
+        int totalCost = 0;
+        int fullTimeCount = 0;
+        int partTimeCount = 0;
+        int totalFullTimeSalary = 0;
+        int totalPartTimeSalary = 0;
+
+        // Header for the report
+        cout << "Monthly Report:" << endl << endl << left
+             << setw(15) << "Type"
+             << setw(25) << "Number of Employees"
+             << setw(25) << "Total Net Salary"
+             << endl;
+
+        cout << string(65, '-') << endl; // Separator line
+
+        // Process each employee
+        for (int i = 0; i < EMPLOYEE; i++) {
+            totalCost += emp[i].GetNetSalary();  // Add to total cost
+
+            // Categorize and calculate full-time and part-time salaries
+            if (emp[i].GetType() == "full time") {
+                fullTimeCount++;
+                totalFullTimeSalary += emp[i].GetNetSalary();
+            } else if (emp[i].GetType() == "part time") {
+                partTimeCount++;
+                totalPartTimeSalary += emp[i].GetNetSalary();
+            }
+        }
+
+        // Output the full-time employees row
+        cout << left
+             << setw(15) << "Full-Time"
+             << setw(25) << fullTimeCount
+             << "$" << setw(25) << totalFullTimeSalary
+             << endl;
+
+        // Output the part-time employees row
+        cout << left
+             << setw(15) << "Part-Time"
+             << setw(25) << partTimeCount
+             << "$" << setw(25) << totalPartTimeSalary
+             << endl;
+
+        cout << string(65, '-') << endl; // Separator line
+
+        // Output the total row
+        cout << left
+             << setw(15) << "Total"
+             << setw(25) << (fullTimeCount + partTimeCount)
+             << "$" << setw(25) << totalCost
+             << endl;
+    }
+};
+
+
+// Function definitions
+int getSalary(const string& position) {
+    if (position == "Barista") return 1920;
+    else if (position == "Cashier") return 1790;
+    else if (position == "Kitchen Staff") return 1850;
+    else if (position == "Cleaner") return 1400;
+    else if (position == "Waiter" || position == "Waitress") return 1700;
+    else if (position == "Supervisor") return 2400;
+    else return 0;
+}
+
+int getDailyWage(int salary) {
+    return salary / 30;
+}
+
+int getHourlyWage(int salary) {
+    return getDailyWage(salary) / 8;
+}
+
+int getSalaryOvertime(int overtime, int hourlyWage) {
+    return overtime * (hourlyWage * 2);
+}
+
+int getSalaryPartTime(int hourlyWage, int workingHours) {
+    return hourlyWage * workingHours;
+}
+
+int getSalaryFullTime(int salary, int overtime, int leave) {
+    int netSalary = salary + getSalaryOvertime(overtime, getHourlyWage(salary));
+    if (leave == 0) {
+        netSalary += 500;
+    } else if (leave == 1) {
+        netSalary += 200;
+    } else if (leave == 2) {
+        netSalary += 100;
+    } else if (leave >= 3) {
+        netSalary -= salary * 0.01; 
+    }
+    return netSalary;
+}
+
+int calcIncomeTax(int salary) {
+    return (salary * 0.02) + 10; // 2% tax
+}
+
+int main() {
+    int menu = 0;
+    EmployeeManager manager;
+
+    while (true) {
+        cout << "\nMenu options"
+             << "\n1. Create an employee"
+             << "\n2. Update an employee"
+             << "\n3. View all employees"
+             << "\n4. View salary of employees by type"
+             << "\n5. Delete an employee"
+             << "\n6. Monthly Report" 
+             << "\n0. Quit the program"
+             << "\nEnter : ";
+        cin >> menu;
+        cin.ignore(); // Clear the newline character from the input buffer
+
+#ifdef _WIN32
+        system("cls");
+#else
+        system("clear");
+#endif
+
+        if (menu == 0)
+            break;
+        else if (menu == 1)
+            manager.insertEmployee();
+        else if (menu == 2)
+            manager.updateEmployeeById();
+        else if (menu == 3)
+            manager.showEmployees();
+        else if (menu == 4) {
+            string type;
+            cout << "Enter Employee Type (full time/part time): ";
+            getline(cin, type); // Use getline to read the entire line
+            manager.showEmployeesByType(type);
+        } else if (menu == 5)
+            manager.deleteAnEmployeeById();
+        else if (menu == 6) // Call the report function
+            manager.MonthlyReport();
+    }
+    return 0;
+}
